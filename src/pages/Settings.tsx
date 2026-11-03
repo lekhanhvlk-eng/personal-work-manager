@@ -2,9 +2,11 @@ import { useRef, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { Page, SyncIndicator } from '../components/Layout'
 import { useToast } from '../components/Toast'
-import { Button, Card, ConfirmDialog, SectionTitle } from '../components/ui'
+import { Button, Card, ConfirmDialog, SectionTitle, inputClass } from '../components/ui'
 import { LocalRepository } from '../data/localRepository'
+import { copyText } from '../lib/clipboard'
 import { formatDateTimeVN, todayVN } from '../lib/dates'
+import { IS_ARTIFACT } from '../lib/env'
 import { BackupValidationError, buildBackup, downloadText, parseBackup, tasksToCSV } from '../lib/exporters'
 import { buildSampleData } from '../lib/sampleData'
 import type { BackupFile } from '../lib/types'
@@ -22,6 +24,8 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
   const stamp = todayVN().replace(/-/g, '')
 
   const runImport = async (backup: BackupFile, successPrefix: string) => {
@@ -43,7 +47,9 @@ export function SettingsPage() {
     <Page title="Cài đặt & dữ liệu" back="/" actions={<SyncIndicator />}>
       <Card className="p-4">
         <p className="text-sm text-slate-500">Tài khoản</p>
-        <p className="font-semibold text-slate-900">{mode === 'cloud' ? email : 'Chế độ dùng thử (không đăng nhập)'}</p>
+        <p className="font-semibold text-slate-900">
+          {mode === 'cloud' ? email : IS_ARTIFACT ? 'Lưu trên điện thoại này' : 'Chế độ dùng thử (không đăng nhập)'}
+        </p>
         <p className="mt-2 text-sm text-slate-600">
           {mode === 'cloud' ? (
             <>
@@ -57,6 +63,8 @@ export function SettingsPage() {
                 </>
               )}
             </>
+          ) : IS_ARTIFACT ? (
+            'Dữ liệu nằm trong trình duyệt của điện thoại này, không cần tài khoản. Nếu xoá dữ liệu trình duyệt sẽ mất, nên thỉnh thoảng sao chép bản sao lưu.'
           ) : (
             'Dữ liệu chỉ lưu trên trình duyệt của thiết bị này. Để đồng bộ nhiều thiết bị, hãy cấu hình Supabase (xem README).'
           )}
@@ -83,39 +91,67 @@ export function SettingsPage() {
         <button
           type="button"
           className="flex w-full items-center gap-3 p-4 text-left active:bg-slate-50"
-          onClick={() => {
-            downloadText(
-              `sao-luu-cong-viec-${stamp}.json`,
-              JSON.stringify(buildBackup(data), null, 2),
-              'application/json',
-            )
+          onClick={async () => {
+            const json = JSON.stringify(buildBackup(data))
+            if (IS_ARTIFACT) {
+              // Trang mở qua link không cho tải tệp: sao chép để dán vào Zalo "Cloud của tôi".
+              const ok = await copyText(json)
+              toast(
+                ok
+                  ? 'Đã sao chép bản sao lưu. Hãy dán vào Zalo “Cloud của tôi” để giữ an toàn.'
+                  : 'Không thể sao chép.',
+                ok ? 'success' : 'error',
+              )
+              return
+            }
+            downloadText(`sao-luu-cong-viec-${stamp}.json`, json, 'application/json')
             toast('Đã tải tệp sao lưu JSON.')
           }}
         >
-          <Icon name="download" className="h-6 w-6 text-brand-700" />
+          <Icon name={IS_ARTIFACT ? 'copy' : 'download'} className="h-6 w-6 text-brand-700" />
           <span className="flex-1">
-            <span className="block font-semibold text-slate-900">Sao lưu JSON</span>
+            <span className="block font-semibold text-slate-900">
+              {IS_ARTIFACT ? 'Sao chép bản sao lưu' : 'Sao lưu JSON'}
+            </span>
             <span className="block text-xs text-slate-500">Toàn bộ công việc, thành viên, báo cáo và nhật ký</span>
           </span>
         </button>
-        <button
-          type="button"
-          className="flex w-full items-center gap-3 p-4 text-left active:bg-slate-50"
-          onClick={() => {
-            downloadText(
-              `cong-viec-${stamp}.csv`,
-              tasksToCSV(data.tasks, data.members, data.reports),
-              'text/csv;charset=utf-8',
-            )
-            toast('Đã xuất tệp CSV.')
-          }}
-        >
-          <Icon name="list" className="h-6 w-6 text-brand-700" />
-          <span className="flex-1">
-            <span className="block font-semibold text-slate-900">Xuất CSV (Excel)</span>
-            <span className="block text-xs text-slate-500">Danh sách công việc kèm trạng thái và mã báo cáo</span>
-          </span>
-        </button>
+        {!IS_ARTIFACT && (
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 p-4 text-left active:bg-slate-50"
+            onClick={() => {
+              downloadText(
+                `cong-viec-${stamp}.csv`,
+                tasksToCSV(data.tasks, data.members, data.reports),
+                'text/csv;charset=utf-8',
+              )
+              toast('Đã xuất tệp CSV.')
+            }}
+          >
+            <Icon name="list" className="h-6 w-6 text-brand-700" />
+            <span className="flex-1">
+              <span className="block font-semibold text-slate-900">Xuất CSV (Excel)</span>
+              <span className="block text-xs text-slate-500">Danh sách công việc kèm trạng thái và mã báo cáo</span>
+            </span>
+          </button>
+        )}
+        {IS_ARTIFACT && (
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 p-4 text-left active:bg-slate-50"
+            onClick={() => setPasteOpen(true)}
+            disabled={busy}
+          >
+            <Icon name="restore" className="h-6 w-6 text-brand-700" />
+            <span className="flex-1">
+              <span className="block font-semibold text-slate-900">Dán bản sao lưu để khôi phục</span>
+              <span className="block text-xs text-slate-500">
+                Chỉ thêm bản ghi còn thiếu, không xoá dữ liệu hiện có
+              </span>
+            </span>
+          </button>
+        )}
         <button
           type="button"
           className="flex w-full items-center gap-3 p-4 text-left active:bg-slate-50"
@@ -150,10 +186,12 @@ export function SettingsPage() {
 
       {mode === 'demo' && (
         <>
-          <SectionTitle>Dữ liệu dùng thử</SectionTitle>
+          <SectionTitle>{IS_ARTIFACT ? 'Dữ liệu' : 'Dữ liệu dùng thử'}</SectionTitle>
           <Card className="space-y-3 p-4">
             <p className="text-sm text-slate-600">
-              Dữ liệu mẫu chỉ dành cho chế độ dùng thử và không bao giờ trộn vào tài khoản đám mây thật.
+              {IS_ARTIFACT
+                ? 'Tạo vài công việc mẫu để xem thử cách dùng (có thể xoá sau).'
+                : 'Dữ liệu mẫu chỉ dành cho chế độ dùng thử và không bao giờ trộn vào tài khoản đám mây thật.'}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -172,7 +210,7 @@ export function SettingsPage() {
                 className="!text-red-700"
                 onClick={() => setResetOpen(true)}
               >
-                Xoá toàn bộ dữ liệu dùng thử
+                {IS_ARTIFACT ? 'Xoá toàn bộ dữ liệu' : 'Xoá toàn bộ dữ liệu dùng thử'}
               </Button>
             </div>
           </Card>
@@ -209,6 +247,34 @@ export function SettingsPage() {
         }
       />
       <ConfirmDialog
+        open={pasteOpen}
+        title="Dán bản sao lưu"
+        message="Dán nội dung bản sao lưu đã sao chép trước đó vào ô dưới."
+        confirmLabel="Tiếp tục"
+        onCancel={() => {
+          setPasteOpen(false)
+          setPasteText('')
+        }}
+        onConfirm={() => {
+          try {
+            setRestoreFile(parseBackup(pasteText.trim()))
+            setPasteOpen(false)
+            setPasteText('')
+          } catch (err) {
+            toast(err instanceof BackupValidationError ? err.message : 'Bản sao lưu không hợp lệ.', 'error')
+          }
+        }}
+      >
+        <textarea
+          id="paste-backup"
+          rows={5}
+          className={`${inputClass} mt-3 resize-none font-mono text-xs`}
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder='{"app":"personal-work-manager", ...}'
+        />
+      </ConfirmDialog>
+      <ConfirmDialog
         open={logoutOpen}
         title="Đăng xuất?"
         danger={pending.length > 0}
@@ -227,7 +293,7 @@ export function SettingsPage() {
       <ConfirmDialog
         open={resetOpen}
         danger
-        title="Xoá toàn bộ dữ liệu dùng thử?"
+        title={IS_ARTIFACT ? 'Xoá toàn bộ dữ liệu?' : 'Xoá toàn bộ dữ liệu dùng thử?'}
         message="Mọi công việc, thành viên và báo cáo trong chế độ dùng thử trên thiết bị này sẽ bị xoá vĩnh viễn."
         confirmLabel="Xoá tất cả"
         onCancel={() => setResetOpen(false)}

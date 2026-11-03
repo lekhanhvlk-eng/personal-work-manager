@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, MemoryRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ToastProvider } from './components/Toast'
 import { AddTaskPage } from './pages/AddTask'
@@ -11,7 +11,11 @@ import { SettingsPage } from './pages/Settings'
 import { TaskEditPage } from './pages/TaskEdit'
 import { TasksPage } from './pages/Tasks'
 import { TeamPage } from './pages/Team'
+import { IS_ARTIFACT } from './lib/env'
 import { AuthGate } from './state/AuthGate'
+
+// Bản 1 tệp chạy trong khung nhúng: dùng router trong bộ nhớ.
+const Router = IS_ARTIFACT ? MemoryRouter : BrowserRouter
 
 export function AppRoutes() {
   return (
@@ -36,11 +40,11 @@ export function AppRoutes() {
 export default function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
+      <Router>
         <AuthGate>
           <AppRoutes />
         </AuthGate>
-      </BrowserRouter>
+      </Router>
     </ToastProvider>
   )
 }

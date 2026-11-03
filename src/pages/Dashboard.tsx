@@ -6,6 +6,7 @@ import { TaskCard } from '../components/TaskCard'
 import { useToast } from '../components/Toast'
 import { Button, EmptyState, SectionTitle } from '../components/ui'
 import { formatDayHeading, todayVN } from '../lib/dates'
+import { IS_ARTIFACT } from '../lib/env'
 import { sortNewestFirst } from '../lib/filters'
 import type { Task } from '../lib/types'
 import { computeStats, useData, useMemberMap, useReportCodeMap } from '../state/selectors'
@@ -67,7 +68,7 @@ export function DashboardPage() {
         </>
       }
     >
-      {mode === 'demo' && (
+      {mode === 'demo' && !IS_ARTIFACT && (
         <div className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
           <strong>Chế độ dùng thử:</strong> dữ liệu chỉ lưu trên thiết bị này. Cấu hình Supabase để đồng bộ đám mây.{' '}
           <Link to="/settings" className="font-semibold underline">

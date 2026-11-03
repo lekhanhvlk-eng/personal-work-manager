@@ -1,6 +1,7 @@
 import type { Session as SbSession } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Spinner } from '../components/Icon'
+import { migrateLiteData } from '../data/liteMigration'
 import { LocalRepository } from '../data/localRepository'
 import { SupabaseRepository } from '../data/supabaseRepository'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
@@ -27,7 +28,10 @@ function useStartedStore(store: AppStore | null) {
 }
 
 function DemoGate({ children }: { children: ReactNode }) {
-  const store = useMemo(() => new AppStore(new LocalRepository(), 'demo'), [])
+  const store = useMemo(() => {
+    migrateLiteData()
+    return new AppStore(new LocalRepository(), 'demo')
+  }, [])
   useStartedStore(store)
   const session = useMemo<Session>(
     () => ({ store, mode: 'demo', scope: 'demo', email: null, signOut: async () => {} }),

@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { IS_ARTIFACT } from '../lib/env'
 import { useAppState, useSession } from '../state/StoreContext'
 import { Icon, Spinner, type IconName } from './Icon'
 import { useToast } from './Toast'
@@ -85,6 +86,7 @@ export function SyncIndicator() {
   const { online, pending, syncing } = useAppState()
   const toast = useToast()
   if (mode === 'demo') {
+    if (IS_ARTIFACT) return null
     return (
       <span
         className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
@@ -144,6 +146,7 @@ export function Page({
   children: ReactNode
 }) {
   const navigate = useNavigate()
+  const location = useLocation()
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-slate-50/95 backdrop-blur pt-safe">
@@ -152,7 +155,7 @@ export function Page({
             <button
               type="button"
               onClick={() =>
-                typeof back === 'string' ? navigate(back) : window.history.length > 1 ? navigate(-1) : navigate('/')
+                typeof back === 'string' ? navigate(back) : location.key !== 'default' ? navigate(-1) : navigate('/')
               }
               className="-ml-2 rounded-full p-2 text-slate-700 active:bg-slate-200"
               aria-label="Quay lại"

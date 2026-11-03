@@ -121,3 +121,11 @@ src/pages/, components/ Giao diện tiếng Việt
 tests/db/              Kiểm thử tích hợp PostgreSQL
 e2e/                   Kiểm thử Playwright (Android)
 ```
+
+## 7. Bản mở trên điện thoại qua link (không cần tài khoản)
+
+```bash
+npm run build:artifact   # → dist-artifact/tro-ly-cong-viec.html
+```
+
+Lệnh này đóng gói toàn bộ ứng dụng thành **một tệp HTML**. Dữ liệu được lưu trong trình duyệt của điện thoại, không cần Supabase, và giao diện, tính năng vẫn giữ nguyên. Vì trang mở qua link không tải tệp xuống được, phần sao lưu dùng cách **sao chép / dán**.

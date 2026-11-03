@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:db": "vitest run --config vitest.db.config.ts",
     "test:e2e": "playwright test",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "build:artifact": "node scripts/build-artifact.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.80.0",
