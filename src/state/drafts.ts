@@ -12,6 +12,8 @@ export interface ReportDraft {
   content: string
   /** Người dùng đã sửa nội dung thủ công? */
   edited: boolean
+  /** Danh sách ID đã dùng để tạo nội dung hiện tại. */
+  generatedFor: string[]
   options: ReportOptions
   updatedAt: string
 }
@@ -25,6 +27,7 @@ export function newReportDraft(): ReportDraft {
     step: 'select',
     content: '',
     edited: false,
+    generatedFor: [],
     options: { ...DEFAULT_REPORT_OPTIONS },
     updatedAt: new Date().toISOString(),
   }

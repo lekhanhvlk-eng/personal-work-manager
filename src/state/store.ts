@@ -12,7 +12,7 @@ import type {
 import { uuid } from '../lib/uuid'
 import { newMember, newTask } from '../data/factory'
 import { RepoError, isNetworkError, toRepoError } from '../data/errors'
-import type { ExportRequest, Repository } from '../data/repository'
+import { pickTaskInput, type ExportRequest, type Repository } from '../data/repository'
 import { applyExport, rebase, upsertById, type Mutation } from './mutations'
 
 export interface StoreState {
@@ -290,11 +290,14 @@ export class AppStore {
   }
 
   updateTask(id: string, patch: Partial<TaskInput>): void {
+    // Chỉ các trường người dùng được phép sửa — không bao giờ gồm trạng thái báo cáo.
+    const safe = pickTaskInput(patch)
+    if (safe.description !== undefined) safe.description = safe.description.trim()
     this.enqueue({
       mid: uuid(),
       kind: 'updateTask',
       id,
-      patch,
+      patch: safe,
       at: new Date().toISOString(),
     })
   }
