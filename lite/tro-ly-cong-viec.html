@@ -1,0 +1,499 @@
+<title>Trợ lý Công việc</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+  /* Bố cục: 1 cột cho điện thoại — ô ghi nhanh ở trên, danh sách việc theo ngày, thanh thao tác cố định phía dưới. */
+  :root {
+    --bg: #f3f5f9;
+    --surface: #ffffff;
+    --fg: #121a2b;
+    --muted: #5d6880;
+    --line: #dde2ec;
+    --accent: #1f5bd8;
+    --accent-fg: #ffffff;
+    --accent-soft: #e6eefc;
+    --alert: #c8323b;
+    --alert-soft: #fdecee;
+    --ok: #157a4f;
+    --ok-soft: #e4f4ec;
+    --warn: #9a5b00;
+    --warn-soft: #fdf1dc;
+    --shadow: 0 1px 2px rgba(18, 26, 43, .06), 0 2px 6px rgba(18, 26, 43, .06);
+    --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e131d; --surface: #182031; --fg: #e8ecf4; --muted: #9aa5bb; --line: #2a3448;
+      --accent: #6c9cff; --accent-fg: #0b1222; --accent-soft: #1d2b4a;
+      --alert: #ff7b82; --alert-soft: #3a1c22; --ok: #5fd39d; --ok-soft: #173327;
+      --warn: #f2b65c; --warn-soft: #3a2c14; --shadow: 0 1px 2px rgba(0,0,0,.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e131d; --surface: #182031; --fg: #e8ecf4; --muted: #9aa5bb; --line: #2a3448;
+    --accent: #6c9cff; --accent-fg: #0b1222; --accent-soft: #1d2b4a;
+    --alert: #ff7b82; --alert-soft: #3a1c22; --ok: #5fd39d; --ok-soft: #173327;
+    --warn: #f2b65c; --warn-soft: #3a2c14; --shadow: 0 1px 2px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.45;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+  .wrap {
+    max-width: 640px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 140px;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header.top {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px 10px;
+  }
+  header.top h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+  header.top p { margin: 0; font-size: 13px; color: var(--muted); }
+
+  .card { background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); }
+
+  /* Ô ghi nhanh */
+  .entry { padding: 12px; display: grid; gap: 10px; }
+  .entry textarea {
+    width: 100%; min-height: 72px; resize: none; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg); padding: 12px; font-size: 17px; line-height: 1.4;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip {
+    border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 13px;
+    font-size: 14px; font-weight: 600; color: var(--muted);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+  .chip.date { position: relative; overflow: hidden; }
+  .chip.date input { position: absolute; inset: 0; opacity: 0; width: 100%; }
+  .btn {
+    border: 0; border-radius: 12px; min-height: 46px; padding: 0 16px; font-weight: 700; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); }
+  .btn.secondary { background: var(--surface); color: var(--fg); border: 1px solid var(--line); }
+  .btn.ok { background: var(--ok); color: var(--surface); }
+  .btn.danger { background: var(--alert); color: var(--surface); }
+  .btn.ghost { background: transparent; color: var(--muted); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.block { width: 100%; }
+  .entry .save { flex: 1; }
+
+  /* Tabs */
+  .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; background: var(--surface); border-radius: 14px; padding: 4px; margin-block: 16px 12px; box-shadow: var(--shadow); }
+  .tabs button { border: 0; background: transparent; border-radius: 10px; padding: 9px 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+  .count { font-variant-numeric: tabular-nums; }
+
+  .day { margin-block: 14px 6px; font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .task { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 2px solid transparent; }
+  .task.sel { border-color: var(--accent); }
+  .task input[type="checkbox"] { width: 24px; height: 24px; margin: 1px 0 0; accent-color: var(--accent); flex-shrink: 0; }
+  .task .body { flex: 1; min-width: 0; }
+  .task .text { font-size: 15.5px; font-weight: 500; overflow-wrap: anywhere; }
+  .task .meta { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+  .pill { border-radius: 999px; padding: 2px 8px; font-weight: 600; }
+  .pill.doing { background: var(--warn-soft); color: var(--warn); }
+  .pill.done { background: var(--ok-soft); color: var(--ok); }
+  .pill.rep { background: var(--accent-soft); color: var(--accent); }
+  .edit { border: 0; background: transparent; color: var(--muted); padding: 4px 6px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .empty { text-align: center; color: var(--muted); padding: 36px 12px; }
+
+  /* Thanh dưới */
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line);
+    padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .bar .inner { max-width: 640px; margin: 0 auto; display: grid; gap: 8px; }
+  .bar .stats { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  .bar .stats b { color: var(--fg); }
+  .linkbtn { border: 0; background: transparent; color: var(--accent); font-weight: 700; font-size: 14px; padding: 4px; }
+
+  /* Báo cáo */
+  .report textarea {
+    width: 100%; min-height: 55vh; border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
+    padding: 14px; font-size: 15px; line-height: 1.55; resize: vertical;
+  }
+  .note { font-size: 13px; color: var(--muted); margin: 6px 2px 0; }
+  .rep-item { padding: 14px; display: grid; gap: 6px; }
+  .rep-item .h { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; }
+  .rep-item .s { font-size: 13px; color: var(--muted); }
+  .rep-item pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font); font-size: 14px; background: var(--bg); border-radius: 10px; padding: 10px; }
+
+  /* Hộp thoại & thông báo */
+  .overlay { position: fixed; inset: 0; z-index: 20; background: rgba(10, 14, 24, .5); display: flex; align-items: flex-end; justify-content: center; padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .dialog { width: 100%; max-width: 480px; background: var(--surface); border-radius: 18px; padding: 18px; display: grid; gap: 12px; }
+  .dialog h2 { margin: 0; font-size: 18px; }
+  .dialog p { margin: 0; color: var(--muted); }
+  .dialog textarea { width: 100%; min-height: 90px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); padding: 10px; resize: vertical; }
+  .dialog .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 30;
+    background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    max-width: calc(100% - 32px); box-shadow: var(--shadow);
+  }
+  details.tools { margin-top: 28px; color: var(--muted); font-size: 14px; }
+  details.tools summary { cursor: pointer; font-weight: 600; }
+  details.tools .row { margin-top: 10px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .dialog, .toast { animation: rise .18s ease-out; }
+    @keyframes rise { from { transform: translateY(10px); opacity: 0; } }
+    .toast { animation-name: drop; }
+    @keyframes drop { from { transform: translate(-50%, -8px); opacity: 0; } }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Trợ lý Công việc</h1>
+      <p id="today"></p>
+    </div>
+  </header>
+
+  <section class="card entry" aria-label="Ghi nhanh công việc">
+    <textarea id="desc" placeholder="Bạn vừa làm gì? VD: Kiểm tra 5 cửa hàng Vinamilk Q.7" aria-label="Nội dung công việc"></textarea>
+    <div class="row" id="dateRow">
+      <button type="button" class="chip" data-day="0" id="dToday">Hôm nay</button>
+      <button type="button" class="chip" data-day="-1" id="dYest">Hôm qua</button>
+      <label class="chip date" id="dPickLbl"><span id="dPickTxt">Chọn ngày</span><input type="date" id="dPick" aria-label="Chọn ngày làm việc"></label>
+    </div>
+    <div class="row">
+      <button type="button" class="chip" id="stDone" aria-pressed="true">Đã xong</button>
+      <button type="button" class="chip" id="stDoing" aria-pressed="false">Đang làm</button>
+      <button type="button" class="btn primary save" id="saveBtn">Lưu</button>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Danh sách">
+    <button role="tab" id="tabUn" aria-selected="true">Chưa báo cáo <span class="count" id="cUn">0</span></button>
+    <button role="tab" id="tabRep" aria-selected="false">Đã báo cáo <span class="count" id="cRep">0</span></button>
+    <button role="tab" id="tabHist" aria-selected="false">Báo cáo <span class="count" id="cHist">0</span></button>
+  </nav>
+
+  <main id="view"></main>
+
+  <details class="tools">
+    <summary>Sao lưu dữ liệu</summary>
+    <p>Dữ liệu chỉ lưu trong trình duyệt của điện thoại này. Thỉnh thoảng hãy sao chép bản sao lưu và dán vào Zalo "Cloud của tôi" để giữ an toàn.</p>
+    <div class="row">
+      <button type="button" class="btn secondary" id="backupBtn">Sao chép bản sao lưu</button>
+      <button type="button" class="btn secondary" id="restoreBtn">Khôi phục</button>
+    </div>
+  </details>
+</div>
+
+<div class="bar" id="bar" hidden><div class="inner" id="barInner"></div></div>
+<div id="layer"></div>
+
+<script>
+(() => {
+  'use strict';
+  const KEY = 'tlcv:v1';
+  const TZ = 'Asia/Ho_Chi_Minh';
+
+  // ---------- Ngày giờ theo Việt Nam ----------
+  const isoFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const todayISO = () => isoFmt.format(new Date());
+  const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+  const vnDate = (iso) => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+  const WD = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+  const dayLabel = (iso) => {
+    const t = todayISO();
+    if (iso === t) return 'Hôm nay · ' + vnDate(iso);
+    if (iso === addDays(t, -1)) return 'Hôm qua · ' + vnDate(iso);
+    const [y, m, d] = iso.split('-').map(Number);
+    return WD[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] + ' · ' + vnDate(iso);
+  };
+  const timeFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: TZ, hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric', hour12: false });
+  const stamp = (ts) => timeFmt.format(new Date(ts));
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+  // ---------- Lưu trữ (an toàn khi trình duyệt chặn) ----------
+  const empty = () => ({ tasks: [], reports: [], draft: { selected: [], step: 'select', content: '', edited: false } });
+  function load() {
+    try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); return { ...empty(), ...d, draft: { ...empty().draft, ...(d.draft || {}) } }; } } catch (e) {}
+    return empty();
+  }
+  let db = load();
+  let storageOk = true;
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); storageOk = true; }
+    catch (e) { if (storageOk) toast('Không lưu được vào bộ nhớ trình duyệt. Hãy sao chép bản sao lưu.'); storageOk = false; }
+  }
+
+  // ---------- Trạng thái giao diện ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let tab = 'un';
+  let entryDate = todayISO();
+  let entryStatus = 'done';
+
+  // ---------- Tạo báo cáo (chỉ từ dữ liệu thật) ----------
+  const norm = (t) => { let s = t.replace(/\s*\n+\s*/g, '; ').replace(/\s+/g, ' ').trim().replace(/^[-–•*+]\s*/, '').replace(/[\s.;,]+$/, ''); return s ? s.charAt(0).toLocaleUpperCase('vi-VN') + s.slice(1) : s; };
+  const byTime = (a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
+  function buildReport(tasks) {
+    const sorted = [...tasks].sort(byTime);
+    const lines = ['BÁO CÁO CÔNG VIỆC', ''];
+    const days = [];
+    for (const t of sorted) {
+      if (days[days.length - 1] !== t.date) { if (days.length) lines.push(''); days.push(t.date); lines.push('Ngày ' + vnDate(t.date)); }
+      lines.push('- ' + norm(t.text) + (t.status === 'doing' ? ' (đang thực hiện)' : '') + '.');
+    }
+    const done = sorted.filter((t) => t.status !== 'doing').length;
+    lines.push('', 'TỔNG KẾT:', `- Tổng số công việc: ${sorted.length}.`, `- Số ngày ghi nhận: ${days.length}.`, `- Số công việc hoàn thành: ${done}.`);
+    return lines.join('\n');
+  }
+
+  // ---------- Sao chép (KHÔNG thay đổi trạng thái công việc) ----------
+  function copyText(text, okMsg) {
+    const fallback = () => {
+      const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      ta.remove(); toast(ok ? okMsg : 'Không sao chép tự động được — hãy giữ và chọn văn bản để sao chép.');
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast(okMsg), fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  }
+
+  // ---------- Thông báo & hộp thoại trong trang ----------
+  let toastTimer;
+  function toast(msg) {
+    const old = document.querySelector('.toast'); if (old) old.remove();
+    const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg;
+    document.body.appendChild(el); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 2600);
+  }
+  function dialog({ title, message = '', input = null, okText = 'Đồng ý', danger = false, extra = null }) {
+    return new Promise((resolve) => {
+      const layer = $('layer');
+      layer.innerHTML = `<div class="overlay"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+        <h2 id="dlgT">${esc(title)}</h2>${message ? `<p>${message}</p>` : ''}
+        ${input !== null ? `<textarea id="dlgIn">${esc(input)}</textarea>` : ''}
+        ${extra ? extra : ''}
+        <div class="actions"><button type="button" class="btn secondary" id="dlgNo">Huỷ</button>
+        <button type="button" class="btn ${danger ? 'danger' : 'primary'}" id="dlgOk">${esc(okText)}</button></div></div></div>`;
+      const close = (v) => { layer.innerHTML = ''; resolve(v); };
+      $('dlgNo').onclick = () => close(null);
+      layer.querySelector('.overlay').onclick = (e) => { if (e.target.classList.contains('overlay')) close(null); };
+      $('dlgOk').onclick = () => close(input !== null ? $('dlgIn').value : true);
+      layer.querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => close(b.dataset.act)));
+      const f = $('dlgIn') || $('dlgOk'); f.focus();
+    });
+  }
+
+  // ---------- Ghi nhanh ----------
+  function renderEntry() {
+    $('today').textContent = dayLabel(todayISO());
+    const t = todayISO(), y = addDays(t, -1);
+    $('dToday').setAttribute('aria-pressed', entryDate === t);
+    $('dYest').setAttribute('aria-pressed', entryDate === y);
+    const custom = entryDate !== t && entryDate !== y;
+    $('dPickLbl').setAttribute('aria-pressed', custom);
+    $('dPickTxt').textContent = custom ? vnDate(entryDate) : 'Chọn ngày';
+    $('dPick').value = entryDate;
+    $('stDone').setAttribute('aria-pressed', entryStatus === 'done');
+    $('stDoing').setAttribute('aria-pressed', entryStatus === 'doing');
+  }
+  $('dToday').onclick = () => { entryDate = todayISO(); renderEntry(); };
+  $('dYest').onclick = () => { entryDate = addDays(todayISO(), -1); renderEntry(); };
+  $('dPick').onchange = (e) => { if (e.target.value) { entryDate = e.target.value; renderEntry(); } };
+  $('stDone').onclick = () => { entryStatus = 'done'; renderEntry(); };
+  $('stDoing').onclick = () => { entryStatus = 'doing'; renderEntry(); };
+  // Giữ nháp ô nhập khi rời trang
+  try { $('desc').value = localStorage.getItem(KEY + ':entry') || ''; } catch (e) {}
+  $('desc').oninput = () => { try { localStorage.setItem(KEY + ':entry', $('desc').value); } catch (e) {} };
+  $('saveBtn').onclick = () => {
+    const text = $('desc').value.trim();
+    if (!text) { toast('Hãy nhập nội dung công việc.'); $('desc').focus(); return; }
+    db.tasks.push({ id: uid(), text, date: entryDate, status: entryStatus, createdAt: new Date().toISOString(), reportId: null });
+    save();
+    $('desc').value = ''; try { localStorage.removeItem(KEY + ':entry'); } catch (e) {}
+    toast('Đã lưu.');
+    if (tab !== 'un') tab = 'un';
+    render();
+    $('desc').focus();
+  };
+
+  // ---------- Danh sách ----------
+  const unreported = () => db.tasks.filter((t) => !t.reportId);
+  const reported = () => db.tasks.filter((t) => t.reportId);
+  const reportCode = (id) => (db.reports.find((r) => r.id === id) || {}).code || '';
+
+  function pruneSelection() {
+    const ok = new Set(unreported().map((t) => t.id));
+    const before = db.draft.selected.length;
+    db.draft.selected = db.draft.selected.filter((id) => ok.has(id));
+    if (db.draft.selected.length !== before) save();
+  }
+
+  function taskItem(t, selectable) {
+    const sel = selectable && db.draft.selected.includes(t.id);
+    const status = t.status === 'doing' ? '<span class="pill doing">Đang làm</span>' : '<span class="pill done">Đã xong</span>';
+    const rep = t.reportId ? `<span class="pill rep">Đã báo cáo · ${esc(reportCode(t.reportId))}</span>` : '';
+    return `<li class="card task${sel ? ' sel' : ''}">
+      ${selectable ? `<input type="checkbox" id="c-${t.id}" data-sel="${t.id}" ${sel ? 'checked' : ''} aria-label="Chọn: ${esc(t.text)}">` : ''}
+      <label class="body" ${selectable ? `for="c-${t.id}"` : ''}><div class="text">${esc(t.text)}</div><div class="meta">${status}${rep}</div></label>
+      <button type="button" class="edit" data-edit="${t.id}">Sửa</button></li>`;
+  }
+
+  function grouped(tasks, newestFirst) {
+    const sorted = [...tasks].sort(byTime); if (newestFirst) sorted.reverse();
+    let html = '', cur = null;
+    for (const t of sorted) {
+      if (t.date !== cur) { if (cur !== null) html += '</ul>'; cur = t.date; html += `<h2 class="day">${dayLabel(t.date)}</h2><ul class="list">`; }
+      html += taskItem(t, !newestFirst);
+    }
+    return html + (cur !== null ? '</ul>' : '');
+  }
+
+  function render() {
+    pruneSelection();
+    renderEntry();
+    $('cUn').textContent = unreported().length;
+    $('cRep').textContent = reported().length;
+    $('cHist').textContent = db.reports.length;
+    for (const [id, k] of [['tabUn', 'un'], ['tabRep', 'rep'], ['tabHist', 'hist']]) $(id).setAttribute('aria-selected', tab === k);
+
+    const view = $('view');
+    if (tab === 'un' && db.draft.step === 'preview' && db.draft.selected.length) return renderPreview();
+    if (tab === 'un') {
+      const list = unreported();
+      view.innerHTML = list.length ? grouped(list, false) : '<p class="empty">Chưa có việc nào chờ báo cáo.<br>Ghi việc đầu tiên ở ô phía trên.</p>';
+      renderSelectBar(list);
+    } else if (tab === 'rep') {
+      const list = reported();
+      view.innerHTML = list.length ? grouped(list, true) : '<p class="empty">Chưa có việc nào đã báo cáo.</p>';
+      hideBar();
+    } else {
+      const reps = [...db.reports].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      view.innerHTML = reps.length ? '<ul class="list">' + reps.map((r) => `<li class="card rep-item">
+        <div class="h"><span>${esc(r.code)}</span><button type="button" class="linkbtn" data-copyrep="${r.id}">Sao chép</button></div>
+        <div class="s">${r.taskIds.length} công việc · xuất lúc ${stamp(r.createdAt)}</div>
+        <details><summary class="s">Xem nội dung</summary><pre>${esc(r.content)}</pre></details></li>`).join('') + '</ul>'
+        : '<p class="empty">Chưa xuất báo cáo nào.</p>';
+      hideBar();
+    }
+  }
+
+  function hideBar() { $('bar').hidden = true; }
+
+  function renderSelectBar(list) {
+    if (!list.length) return hideBar();
+    const n = db.draft.selected.length;
+    $('bar').hidden = false;
+    $('barInner').innerHTML = `<div class="stats"><span>Đã chọn <b class="count">${n}</b> · Chưa chọn <b class="count">${list.length - n}</b></span>
+      <span><button type="button" class="linkbtn" id="selAll">Chọn tất cả</button> <button type="button" class="linkbtn" id="selNone">Bỏ chọn tất cả</button></span></div>
+      <button type="button" class="btn primary block" id="mkReport" ${n ? '' : 'disabled'}>Tạo báo cáo (${n})</button>`;
+    $('selAll').onclick = () => { db.draft.selected = unreported().map((t) => t.id); save(); render(); };
+    $('selNone').onclick = () => { db.draft.selected = []; save(); render(); };
+    $('mkReport').onclick = () => {
+      const chosen = unreported().filter((t) => db.draft.selected.includes(t.id));
+      const key = chosen.map((t) => t.id).sort().join();
+      if (!(db.draft.edited && db.draft.for === key)) { db.draft.content = buildReport(chosen); db.draft.edited = false; db.draft.for = key; }
+      db.draft.step = 'preview'; save(); render(); window.scrollTo(0, 0);
+    };
+  }
+
+  // ---------- Xem trước & xuất ----------
+  function renderPreview() {
+    const chosen = unreported().filter((t) => db.draft.selected.includes(t.id));
+    const others = unreported().length - chosen.length;
+    $('view').innerHTML = `<section class="report">
+      <h2 class="day">Xem trước · ${chosen.length} công việc</h2>
+      <textarea id="repText" aria-label="Nội dung báo cáo">${esc(db.draft.content)}</textarea>
+      <p class="note">Có thể sửa trực tiếp. Sao chép không làm thay đổi gì. Chỉ khi bấm “Xác nhận đã gửi”, ${chosen.length} việc này mới chuyển sang “Đã báo cáo”${others ? `; ${others} việc không chọn vẫn chờ lần sau` : ''}.</p>
+    </section>`;
+    $('repText').oninput = (e) => { db.draft.content = e.target.value; db.draft.edited = true; save(); };
+    $('bar').hidden = false;
+    $('barInner').innerHTML = `<div class="row" style="flex-wrap:nowrap">
+        <button type="button" class="btn secondary" id="back">Chọn lại</button>
+        <button type="button" class="btn primary" id="copyRep" style="flex:1">Sao chép báo cáo</button></div>
+      <button type="button" class="btn ok block" id="confirmRep">Xác nhận đã gửi</button>`;
+    $('back').onclick = () => { db.draft.step = 'select'; save(); render(); };
+    $('copyRep').onclick = () => copyText(db.draft.content, 'Đã sao chép. Dán vào Zalo/Outlook để gửi.');
+    $('confirmRep').onclick = async () => {
+      const ok = await dialog({ title: 'Xác nhận đã gửi báo cáo?', okText: 'Xác nhận',
+        message: `${chosen.length} việc đã chọn sẽ chuyển sang “Đã báo cáo”.${others ? ` ${others} việc không chọn vẫn giữ “Chưa báo cáo”.` : ''}` });
+      if (!ok) return;
+      // Chỉ đánh dấu đúng các ID đã chọn và còn chưa báo cáo (chống đánh dấu trùng).
+      const ids = new Set(db.draft.selected);
+      const targets = db.tasks.filter((t) => ids.has(t.id) && !t.reportId);
+      if (!targets.length) { toast('Không còn việc nào để xuất.'); db.draft = empty().draft; save(); render(); return; }
+      const now = new Date();
+      const prefix = 'BC-' + isoFmt.format(now).replace(/-/g, '') + '-';
+      const seq = db.reports.filter((r) => r.code.startsWith(prefix)).length + 1;
+      const report = { id: uid(), code: prefix + String(seq).padStart(3, '0'), createdAt: now.toISOString(), taskIds: targets.map((t) => t.id), content: db.draft.content };
+      db.reports.push(report);
+      for (const t of targets) t.reportId = report.id;
+      db.draft = empty().draft;
+      save(); toast(`Đã lưu báo cáo ${report.code}.`); render(); window.scrollTo(0, 0);
+    };
+  }
+
+  // ---------- Sự kiện chung ----------
+  $('view').addEventListener('change', (e) => {
+    const id = e.target.dataset && e.target.dataset.sel; if (!id) return;
+    const s = new Set(db.draft.selected); e.target.checked ? s.add(id) : s.delete(id);
+    db.draft.selected = [...s]; save(); render();
+  });
+  $('view').addEventListener('click', async (e) => {
+    const editId = e.target.dataset && e.target.dataset.edit;
+    const copyId = e.target.dataset && e.target.dataset.copyrep;
+    if (copyId) { const r = db.reports.find((x) => x.id === copyId); if (r) copyText(r.content, `Đã sao chép ${r.code}.`); return; }
+    if (!editId) return;
+    const t = db.tasks.find((x) => x.id === editId); if (!t) return;
+    const extra = `<div class="row">
+      <button type="button" class="chip" data-act="toggle">${t.status === 'doing' ? 'Đánh dấu đã xong' : 'Chuyển về đang làm'}</button>
+      ${t.reportId ? '<button type="button" class="chip" data-act="unreport">Đưa lại vào chưa báo cáo</button>' : ''}
+      <button type="button" class="chip" data-act="delete" style="color:var(--alert)">Xoá</button></div>`;
+    const res = await dialog({ title: 'Sửa công việc', input: t.text, okText: 'Lưu', extra,
+      message: t.reportId ? 'Sửa nội dung không làm thay đổi báo cáo đã xuất.' : '' });
+    if (res === null) return;
+    if (res === 'toggle') { t.status = t.status === 'doing' ? 'done' : 'doing'; save(); render(); toast('Đã cập nhật trạng thái.'); return; }
+    if (res === 'unreport') { t.reportId = null; save(); render(); toast('Việc đã quay lại danh sách chưa báo cáo.'); return; }
+    if (res === 'delete') {
+      const sure = await dialog({ title: 'Xoá công việc này?', message: esc(t.text), okText: 'Xoá', danger: true });
+      if (sure) { db.tasks = db.tasks.filter((x) => x.id !== t.id); save(); render(); toast('Đã xoá.'); }
+      return;
+    }
+    if (typeof res === 'string' && res.trim()) { t.text = res.trim(); save(); render(); toast('Đã lưu.'); }
+  });
+  for (const [id, k] of [['tabUn', 'un'], ['tabRep', 'rep'], ['tabHist', 'hist']]) $(id).onclick = () => { tab = k; render(); };
+
+  // ---------- Sao lưu / khôi phục bằng sao chép–dán ----------
+  $('backupBtn').onclick = () => copyText(JSON.stringify({ app: 'tlcv', v: 1, at: new Date().toISOString(), tasks: db.tasks, reports: db.reports }), 'Đã sao chép bản sao lưu. Hãy dán vào nơi an toàn.');
+  $('restoreBtn').onclick = async () => {
+    const txt = await dialog({ title: 'Khôi phục dữ liệu', message: 'Dán bản sao lưu vào ô dưới. Chỉ thêm những việc/báo cáo còn thiếu, không xoá dữ liệu hiện có.', input: '', okText: 'Khôi phục' });
+    if (!txt) return;
+    try {
+      const b = JSON.parse(txt);
+      if (b.app !== 'tlcv' || !Array.isArray(b.tasks) || !Array.isArray(b.reports)) throw new Error();
+      const have = new Set(db.tasks.map((t) => t.id)), haveR = new Set(db.reports.map((r) => r.id));
+      let n = 0;
+      for (const t of b.tasks) if (t && t.id && t.text && !have.has(t.id)) { db.tasks.push(t); n++; }
+      for (const r of b.reports) if (r && r.id && !haveR.has(r.id)) db.reports.push(r);
+      save(); render(); toast(`Đã khôi phục ${n} công việc.`);
+    } catch (e) { toast('Bản sao lưu không hợp lệ.'); }
+  };
+
+  render();
+})();
+</script>
