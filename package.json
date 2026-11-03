@@ -1,0 +1,44 @@
+{
+  "name": "personal-work-manager",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Ứng dụng quản lý công việc cá nhân & báo cáo thông minh (PWA)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "test:e2e": "playwright test",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.80.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "^7.18.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.15.3",
+    "@types/pg": "8.11.14",
+    "@types/react": "18.3.20",
+    "@types/react-dom": "18.3.6",
+    "@vitejs/plugin-react": "4.4.1",
+    "autoprefixer": "10.4.21",
+    "jsdom": "26.1.0",
+    "pg": "8.15.6",
+    "postcss": "^8.5.32",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.8.3",
+    "vite": "^6.4.5",
+    "vite-plugin-pwa": "1.0.0",
+    "vitest": "3.1.3"
+  }
+}
